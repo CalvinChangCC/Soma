@@ -1,0 +1,6 @@
+framework module Soma {
+  umbrella header "Soma-umbrella.h"
+
+  export *
+  module * { export * }
+}
