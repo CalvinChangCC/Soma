@@ -57,10 +57,10 @@ open class SomaProvider<Target: SomaTargetType>: SomaProviderType {
             fatalError("[SOMA][ERROR] SocketIOClient is null")
         }
 
-        client.on(clientEvent: .connect) { [weak self] (receive, emitter) in
+        client.on(clientEvent: .connect) { [weak self, weak client] (receive, emitter) in
             if var emitInfo = target.emitInfo {
                 self?.plugins.forEach({ emitInfo = $0.willEmit(target: target, emit: emitInfo) })
-                client.emit(emitInfo.key, emitInfo.value)
+                client?.emit(emitInfo.key, emitInfo.value)
             }
             self?.plugins.forEach({ $0.didConnect(target: target) })
         }
