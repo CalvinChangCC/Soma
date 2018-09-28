@@ -23,7 +23,15 @@ open class SomaProvider<Target: SomaTargetType>: SomaProviderType {
     open var serverURL: URL
 
     /// The token for connect to socket.io server
-    open var connectParams: [String: Any]?
+    open var connectParams: [String: Any]? {
+        didSet {
+            manager.config = [.connectParams(connectParams ?? [:]), .log(false)]
+            for client in manager.nsps.values {
+                client.disconnect()
+                client.connect()
+            }
+        }
+    }
 
     public let manager: SocketManager
 
