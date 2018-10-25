@@ -1,19 +1,22 @@
-![Version](https://img.shields.io/badge/pod-2.0.0-blue.svg)  ![Build Pass](https://img.shields.io/continuousphp/git-hub/doctrine/dbal/master.svg)  ![Swift 4.0](https://img.shields.io/badge/Swift-4.0-orange.svg?style=flat)  ![License](https://img.shields.io/cocoapods/l/Presentr.svg?style=flat)
+![Version](https://img.shields.io/badge/pod-1.0.2-blue.svg)  ![Build Pass](https://img.shields.io/continuousphp/git-hub/doctrine/dbal/master.svg)  ![Swift 4.2](https://img.shields.io/badge/Swift-4.2-orange.svg?style=flat)  ![License](https://img.shields.io/cocoapods/l/Presentr.svg?style=flat)
 
 
 
 ## About
 
-This library is use for change the color in run time, by the different style file, the system can change the color at runtime.
+Package the Socket.io library to the abstraction layer, here are some awesome features
+
+- Split namespace and emit data to each classes
+- Easy to make stub data for test
+- Plugin for states
 
 
 
 
 ## What's New
 
-#### 2.0.0
-- Remove all the project dependency
-- Change UIButton's IBInspectable property name 
+#### 1.0.2
+- Add change configure mechanism 
 
 #### 1.0.1
 
@@ -26,7 +29,7 @@ This library is use for change the color in run time, by the different style fil
 
 
 ## Supported Swift Versions
-- Swift 4
+- Swift 4+
 
 
 
@@ -37,7 +40,7 @@ This library is use for change the color in run time, by the different style fil
 ```ruby
 use_frameworks!
 
-pod 'SAPThemeManager'
+pod 'Soma'
 ```
 
 ### Manually
@@ -48,54 +51,130 @@ pod 'SAPThemeManager'
 
 ## Getting started
 
-### Create a Style File
+### Create Provider
 
-It is **important to create the style file use the following format** and store in json format
+It is **socket connecter and controller** 
 
-Your **Style File** can be as simple as this:
+Provider is like:
 
-```json
-{
-    "ColorName1": "HexString",
-    "ColorName2": "HexString",
-    ...
+```swift
+let provider = SomaProvider<SocketType>(serverURL: URL(string: "http://test.domain.com") ?? URL(fileURLWithPath: ""), plugins: [SomaLoggerPlugin(verbose: true)])
+```
+
+
+
+### Create event object
+
+It's object is use for receive the event
+
+```swift
+class SocketEvent: SomaEventType {
+    var name = "update"
+
+    func didReceiveEvent(message: SomaMessage) {
+        print("[DEBUG] Receive message \(try! message.mapJson())")
+    }
 }
 ```
 
 
-### Setup in AppDelegate
 
-Samply insert the code at **didFinishLaunchingWithOptions** method
+### Create Emit Data
 
-```swift
-func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplicationLaunchOptionsKey: Any]?) -> Bool {
-        SAPThemeManager.initWith(theme: "StyleFileName")
-        
-        return true
+Create the **emit information** if you need
+
+``` swift
+class SocketEmitInfo: SomaEmitType {
+    var key = "join"
+
+    var value: SomaEmitData {
+        return ["Emit information"]
     }
+}
 ```
 
-Instantiate the View Controller you want to present and use the customPresentViewController method along with your **Presentr** object to do the custom presentation.
 
 
+### Create Target Object
 
-## Change Color
+It is **namespace** object with event and, create object and use provider to connect to the socket
 
-### Label
+The object as simple as this:
 
 ```swift
-label.backgroundColorKey = "ColorKey1"
-```
-#### 
+enum SocketType: SomaTargetType {
+    case message(SomaEmitType, SomaEventType)
+    case stateUpdate(SomaEventType)
+    case infoUpdate([SomaEventType])
 
-### Button
+    var namespace: String {
+        switch self {
+        case .message:
+            return "/message"
+        case .stateUpdate:
+            return "/stateUpdate"
+        case .infoUpdate:
+            return "/infoUpdate"
+        }
+    }
+
+    var timeoutInterval: TimeInterval {
+        return 5
+    }
+
+    var emitInfo: SomaEmitType? {
+        switch self {
+        case .message(let info, _):
+            return info
+        default:
+            return nil
+        }
+    }
+
+    var vaildateEvents: [SomaEventType]? {
+        switch self {
+        case .message(_, let event):
+            return [event]
+        case .stateUpdate(let event):
+            return [event]
+        case .infoUpdate(let events):
+            return events
+        }
+    }
+}
+
+```
+
+
+
+## Plugin
+
+If there is extra action needed after connect, disconnect, will emit data, etc.
+
+Plugin is useful for this situation!
+
+By implement the plugin protocol and setup to provider, all the extra action will be operated after those situation
 
 ```swift
-button.setTitleColorKey("ColorKey2", for: .normal)
-button.setTitleColorKey("ColorKey3", for: .highlighted)
+public protocol SomaPluginType {
+    func didConnect(target: SomaTargetType)
+
+    func didDisconnect(target: SomaTargetType)
+
+    func willEmit(target: SomaTargetType, emit: SomaEmitType) -> SomaEmitType
+
+    func didReceive(target: SomaTargetType, message: SomaMessage)
+
+    func process(target: SomaTargetType, message: SomaMessage) -> SomaMessage
+
+    func didTimeout(target: SomaTargetType)
+
+    func didErrorOccur(target: SomaTargetType, errors: [Any])
+}
+
 ```
 
-And more...
+
 
 
 
